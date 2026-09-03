@@ -1,6 +1,6 @@
 import type { ILoginRequest, MiddleWare, SignUpRequest } from "@/controllers/types";
 import { getRequestBody } from "@/utils";
-import { loginRequestValidationSchema } from "@/validations/schemas";
+import { loginRequestValidationSchema, signupRequestValidationSchema } from "@/validations/schemas";
 
 export const authenticateUser: MiddleWare = (handler) => async (c) => {
 
@@ -35,7 +35,7 @@ export const validateLoginRequest: MiddleWare = (handler) => async (c) => {
 export const validateSignUpRequest: MiddleWare = (handler) => async (c) => {
 
     const body = await getRequestBody<SignUpRequest>(c.req);
-    const result = loginRequestValidationSchema.safeParse(body);
+    const result = signupRequestValidationSchema.safeParse(body);
 
     if (!result.success) {
         return c.json(result.error, 400);

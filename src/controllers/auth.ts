@@ -11,6 +11,14 @@ export const authController: Controller = {
             validateSignUpRequest(async (c) => {
 
                 const body = c.get("body") as ISignUpRequest;
+                const user = await User.findOne({
+                    email: body.email
+                })
+
+                if (user) {
+                    return c.json({ message: 'user already exists' }, 400);
+
+                }
 
                 const newUser = new User();
                 newUser.email = body.email;
@@ -20,7 +28,7 @@ export const authController: Controller = {
 
                 return c.json({ message: "User created!" }, 201);
             }),
-            //todo: Prevent  loggedin user from relogin
+        //todo: Prevent  loggedin user from relogin
         "/login": validateLoginRequest(async (c) => {
 
             const body: LoginRequest = c.get("body");

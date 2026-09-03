@@ -6,7 +6,6 @@ export const userSchema = new mongoose.Schema({
         minLength: 3,
         maxLength: 50,
         required: true,
-        unique: true,
     },
     email: {
         type: String,
