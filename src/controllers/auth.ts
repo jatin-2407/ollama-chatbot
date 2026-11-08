@@ -1,14 +1,13 @@
 import bcrypt from "bcrypt";
 import JWT from "jsonwebtoken";
 import type { Controller, ISignUpRequest, LoginRequest } from "./types";
-import { validateLoginRequest, validateSignUpRequest } from "@/middlewares/auth";
+import { blockLoggedIn, validateLoginRequest, validateSignUpRequest } from "@/middlewares/auth";
 import { User } from "@/database/models";
 
 export const authController: Controller = {
     post: {
         "/signup":
-            //todo: Prevent  loggedin user registering
-            validateSignUpRequest(async (c) => {
+            blockLoggedIn(validateSignUpRequest(async (c) => {
 
                 const body = c.get("body") as ISignUpRequest;
                 const user = await User.findOne({
@@ -27,28 +26,30 @@ export const authController: Controller = {
                 await newUser.save();
 
                 return c.json({ message: "User created!" }, 201);
-            }),
+            })),
         //todo: Prevent  loggedin user from relogin
-        "/login": validateLoginRequest(async (c) => {
+        "/login":
+            blockLoggedIn(validateLoginRequest(async (c) => {
 
-            const body: LoginRequest = c.get("body");
+                const body: LoginRequest = c.get("body");
 
-            const user = await User.findOne({ email: body.email });
-            if (!user) return c.json({ message: "Invalid login!" }, 401);
+                const user = await User.findOne({ email: body.email });
+                if (!user) return c.json({ message: "Invalid login!" }, 401);
 
-            const passwordOkay = await bcrypt.compare(body.password, user.password);
-            if (!passwordOkay) return c.json({ message: "Invalid login!" }, 401);
+                const passwordOkay = await bcrypt.compare(body.password, user.password);
+                if (!passwordOkay) return c.json({ message: "Invalid login!" }, 401);
 
 
-            const jwtSecret = process.env.APP_PASSWORD_CODE;
-            if (!jwtSecret) throw new Error("APP_PASSWORD_CODE is not configured");
-            const jwt = JWT.sign({ user: user._id.toString() }, jwtSecret, { expiresIn: "7d" });
+                const jwtSecret = process.env.APP_PASSWORD_CODE;
+                if (!jwtSecret) throw new Error("APP_PASSWORD_CODE is not configured");
+                const jwt = JWT.sign({ user: user._id.toString() }, jwtSecret, { expiresIn: "7d" });
 
-            return c.json({
-                message: "Welcome",
-                token: jwt,
-            }, 200);
-        })
+                return c.json({
+                    message: "Welcome",
+                    token: jwt,
+                }, 200);
+            })),
+
     },
 };
 
