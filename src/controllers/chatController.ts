@@ -2,7 +2,8 @@ import type { Controller, MiddleWare } from "./types";
 import { allowLoggedIn } from "@/middlewares/auth";
 import type { Context } from "hono";
 import z from "zod";
-import { createChat, deleteChat, getChat, listChats } from "@/services/ChatService";
+import { createChat, deleteChat, getChat, listChats, loadChat } from "@/services/ChatService";
+import { getMessageFilesName, loadChatMessages } from "@/services/MessageService";
 
 interface IChatRequest {
     title: string,
@@ -46,15 +47,18 @@ export const chatController: Controller = {
             allowLoggedIn(async (c) => {
                 //todo optimize this for pagination and model wise message selection 
                 try {
-                    const chat = await getChat(c.req.param("chat_id") || "");
-                    if (!chat)
+
+                    const { loadingFails, chats } = await loadChat(c.req.param("chat_id") || "");
+
+                    if (loadingFails)
                         return c.json({
-                            message: 'Chat not found!',
-                        }, 400);
+                            message: 'fail to load chat!',
+                        }, 500);
+
 
                     return c.json({
                         message: 'Chat fetched successfully!',
-                        data: chat
+                        data: chats
                     }, 200);
 
                 } catch (e: unknown) {

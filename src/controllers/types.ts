@@ -16,7 +16,7 @@ export type ControllerMethod = (c: AppContext) => Promise<Response>;
 export type MiddleWare = (handler: ControllerMethod) => ControllerMethod;
 
 export type Controller = {
-    [key in "get" | "post"]?: {
+    [key in "get" | "post"|"delete"]?: {
         [path: string]: ControllerMethod;
     };
 };
