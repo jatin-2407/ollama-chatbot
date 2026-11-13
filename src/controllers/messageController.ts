@@ -2,13 +2,9 @@ import type { Controller } from "./types";
 import { allowLoggedIn } from "@/middlewares/auth";
 import type { Context } from "hono";
 import z, { ZodError } from "zod";
-import fs from "node:fs";
-
 import mongoose from "mongoose";
 import { type ChatRequest, type ChatResponse, type Message } from "ollama";
-import ollama from 'ollama'
-import { Chat, type IChat } from "@/database/models";
-import { getMessageFilesName, loadChatMessages, sendMessageToLLM, writeJson } from "@/services/MessageService";
+import { sendMessageToLLM, writeJson } from "@/services/MessageService";
 import { loadChat } from "@/services/ChatService";
 
 interface IMessageRequest {
@@ -32,7 +28,7 @@ const validateMessageRequest = async (c: Context): Promise<IMessageRequest | Zod
     return data;
 }
 
-export const chatController: Controller = {
+export const messageController: Controller = {
     post: {
         "/send":
             allowLoggedIn(async (c) => {
@@ -49,28 +45,35 @@ export const chatController: Controller = {
 
                 let messageFail = false;
                 let response: Array<Message & { role: string, content: string }> = []
-                chats.some(async (chat) => {
-                    try {
-                        const reply = await sendMessageToLLM(chat);
-                        response.push(reply);
-                        chat.messages?.push(reply)
-                    } catch (e) {
-                        messageFail = true;
-                        return true;
-                    }
-                });
+                for (let i = 0; i < chats.length; i++) {
+                    const chat = chats[i];
+                    if (chat)
+                        try {
+                            chat?.messages?.push({ role: 'user', content: res.message });
+                            const reply = await sendMessageToLLM(chat);
+                            response.push(reply);
+                            chat.messages?.push(reply)
+                        } catch (e) {
+                            console.log("error", e)
+                            messageFail = true;
+                            break;
+                        }
+
+                }
+
 
                 if (messageFail) {
                     return c.json({ error: 'fail  to get chat response' }, 500);
                 }
 
-                fileNames.some(async (file, index) => {
+                for (let i = 0; i < fileNames.length; i++) {
                     try {
-                        writeJson(file, chats[index]);
+                        writeJson(fileNames[i] || "", chats[i]);
                     } catch {
                         return c.json({ error: 'fail  to save chat response,try again' }, 500);
                     }
-                })
+                }
+
 
                 return c.json({
                     response,

@@ -14,7 +14,6 @@ export interface IChat {
     _id: string,
     title: string;
     model_names: string[];
-    user_input: string[],
     model_responses: {
         [index: number]: string[]
     },

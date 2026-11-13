@@ -2,8 +2,8 @@ import type { Controller, MiddleWare } from "./types";
 import { allowLoggedIn } from "@/middlewares/auth";
 import type { Context } from "hono";
 import z from "zod";
-import { createChat, deleteChat, getChat, listChats, loadChat } from "@/services/ChatService";
-import { getMessageFilesName, loadChatMessages } from "@/services/MessageService";
+import { createChat, deleteChat, listChats, loadChat } from "@/services/ChatService";
+import ollama from "ollama";
 
 interface IChatRequest {
     title: string,
@@ -14,13 +14,18 @@ const chatSchema = z.object({
     model_names: z.array(z.string().nonempty("model name cant be empty")).nonempty("model names are required").min(1, "Model name cant be empty").max(2, "only  two models are allowed at a time"),
 });
 
-const validateChatRequest: MiddleWare = (handle) => async (c: Context) => {
-    const data = await c.req.json();
-    const res = chatSchema.safeParse(data);
-    if (res.error) {
-        return c.json({ error: res.error }, 400);
-    };
-    return handle(c);
+const validateChatRequest = async (c: Context): Promise<IChatRequest | undefined> => {
+    try {
+        const data = await c.req.json<IChatRequest>();
+        const res = chatSchema.safeParse(data);
+        if (res.error) {
+            return;
+        };
+        return data;
+    } catch (e) {
+        console.log({ error: e });
+        return;
+    }
 }
 
 
@@ -28,6 +33,21 @@ const validateChatRequest: MiddleWare = (handle) => async (c: Context) => {
 
 export const chatController: Controller = {
     get: {
+        "/models": allowLoggedIn(async (c) => {
+            try {
+                const { models } = await ollama.list();
+                return c.json({
+                    models
+                }, 200);
+            } catch (e) {
+
+                return c.json({
+                    models: []
+                }, 500);
+            }
+
+
+        }),
         "/list":
             allowLoggedIn(async (c) => {
                 try {
@@ -92,18 +112,21 @@ export const chatController: Controller = {
     },
     post: {
         "/create":
-            allowLoggedIn(async (c) => {
-                return validateChatRequest(async () => {
+            allowLoggedIn(async (c: Context) => {
 
-                    const data = await c.req.json<IChatRequest>();
-                    const chat = await createChat(data.title, data.model_names);
+                const res = await validateChatRequest(c);
+                if (!res) {
+                    return c.json({ error: "Invalid request" }, 400)
+                }
 
-                    return c.json({
-                        message: 'Chat created successfully!',
-                        data: chat
-                    }, 201);
+                const data = await c.req.json<IChatRequest>();
+                const chat = await createChat(data.title, data.model_names);
 
-                })(c);
+                return c.json({
+                    message: 'Chat created successfully!',
+                    data: chat
+                }, 201);
+
             })
     },
 };

@@ -10,10 +10,10 @@ const isLoggedin = async (req: HonoRequest): Promise<false | IUser> => {
     const authToken = req.header("auth-token") || "";
     try {
         const payload: any = JWT.verify(authToken, process.env.APP_PASSWORD_CODE || "");
-        if (!payload || !payload.user) {
+        if (payload && !payload.user) {
             return false;
         }
-        const authUser = await User.findOne(payload.user);
+        const authUser = await User.findById(payload.user);
         if (!authUser) {
             return false;
         }
@@ -34,7 +34,7 @@ export const blockLoggedIn: MiddleWare = (handler) => async (c: Context) => {
 export const allowLoggedIn: MiddleWare = (handler) => async (c: Context) => {
     const res = await isLoggedin(c.req);
     if (res === false) {
-        return c.json({ error: "Invalid request" }, 400);
+        return c.json({ error: "Invalid request" }, 401);
     }
     //set the user for further use
     c.set("user", res as IUser);

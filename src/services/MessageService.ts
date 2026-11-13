@@ -44,7 +44,11 @@ export const loadChatMessages = (chatMessageFile: string) => {
 
 
 export const sendMessageToLLM = async (c: ChatRequest & { stream?: boolean }) => {
-    const res = await ollama.chat({ ...c, stream: false });
+    const res = await ollama.chat({
+        model:c.model,
+        messages:c.messages,
+        stream:false
+    });
     return { role: 'assistant', content: res.message.content };
 }
 
