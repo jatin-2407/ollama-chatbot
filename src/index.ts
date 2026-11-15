@@ -2,18 +2,31 @@ import { Hono } from "hono";
 import { backend } from "./backend";
 import indexHtml from "./index.html";
 
-const app = new Hono();
 
-await backend(app);
+export async function app() {
+  const app = new Hono();
 
-const port = Number(Bun.env.PORT) || 3000;
-const hostname = Bun.env.HOST || "0.0.0.0";
+  await backend(app);
 
-Bun.serve({
-  port,
-  hostname,
-  routes: {
-    "/": indexHtml,
-  },
-  fetch: app.fetch,
-});
+  const port = Number(Bun.env.PORT) || 3000;
+  const hostname = Bun.env.HOST || "0.0.0.0";
+
+  console.log("Environment:", Bun.env.NODE_ENV)
+  const server = Bun.serve({
+    port,
+    hostname,
+    routes: {
+      "/": indexHtml,
+      "/signup": indexHtml,
+      "/login": indexHtml,
+    },
+    fetch: app.fetch,
+  });
+
+  return server
+
+}
+
+if (Bun.env.NODE_ENV !== 'test') {
+  app();
+}

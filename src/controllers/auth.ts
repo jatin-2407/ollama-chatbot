@@ -3,10 +3,11 @@ import JWT from "jsonwebtoken";
 import type { Controller, ISignUpRequest, LoginRequest } from "./types";
 import { blockLoggedIn, validateLoginRequest, validateSignUpRequest } from "@/middlewares/auth";
 import { User } from "@/database/models";
+import { basePath } from "hono/route";
 
 export const authController: Controller = {
     post: {
-        "/signup":
+        "/api/v1/signup":
             blockLoggedIn(validateSignUpRequest(async (c) => {
 
                 const body = c.get("body") as ISignUpRequest;
@@ -28,7 +29,7 @@ export const authController: Controller = {
                 return c.json({ message: "User created!" }, 201);
             })),
         //todo: Prevent  loggedin user from relogin
-        "/login":
+        "/api/v1/login":
             blockLoggedIn(validateLoginRequest(async (c) => {
 
                 const body: LoginRequest = c.get("body");
