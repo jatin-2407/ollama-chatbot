@@ -33,7 +33,7 @@ const validateChatRequest = async (c: Context): Promise<IChatRequest | undefined
 
 export const chatController: Controller = {
     get: {
-        "/models": allowLoggedIn(async (c) => {
+        "/api/v1/chat/models": allowLoggedIn(async (c) => {
             try {
                 const { models } = await ollama.list();
                 return c.json({
@@ -48,7 +48,7 @@ export const chatController: Controller = {
 
 
         }),
-        "/list":
+        "/api/v1/chat/list":
             allowLoggedIn(async (c) => {
                 try {
                     const chats = await listChats();
@@ -63,7 +63,7 @@ export const chatController: Controller = {
                     }, 500);
                 }
             }),
-        "/:chat_id":
+        "/api/v1/chat/:chat_id":
             allowLoggedIn(async (c) => {
                 //todo optimize this for pagination and model wise message selection 
                 try {
@@ -89,7 +89,7 @@ export const chatController: Controller = {
             }),
     },
     delete: {
-        "/:chat_id":
+        "/api/v1/chat/:chat_id":
             allowLoggedIn(async (c) => {
                 try {
                     const chat = await deleteChat(c.req.param("chat_id") || "");
@@ -111,7 +111,7 @@ export const chatController: Controller = {
             })
     },
     post: {
-        "/create":
+        "/api/v1/chat/create":
             allowLoggedIn(async (c: Context) => {
 
                 const res = await validateChatRequest(c);

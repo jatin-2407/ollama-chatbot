@@ -10,8 +10,10 @@ export const AuthProvider: FC<IProps> = ({ children }) => {
 
     const [token, setToken] = useState("");
     const [user, setUser] = useState("");
+    const [loading, setLoading] = useState(true);
 
     useEffect(() => {
+        setLoading(true);
         const token = localStorage.getItem("auth-token");
         if (token) {
             setToken(token);
@@ -22,19 +24,22 @@ export const AuthProvider: FC<IProps> = ({ children }) => {
             setUser(user);
         }
 
+        setLoading(false);
+
 
 
     }, []);
 
     const value: IAuthContext = useMemo(() => {
-
         return {
             authToken: token,
             authUser: user,
             isLoggedIn: Boolean(token.trim() && user.trim())
         }
 
-    }, [user, token])
+    }, [user, token,loading])
+
+    if (loading) return <>Please wait....!</>
 
     return <authContext.Provider value={value}>
         {children}

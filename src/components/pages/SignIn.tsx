@@ -69,7 +69,7 @@ export const SignIn = () => {
                     const result = await res.json()
                     localStorage.setItem("auth-user", result.user || "");
                     localStorage.setItem("auth-token", result.token || "")
-                    navigate("/");
+                    window.location.reload();
                     return;
                 }
             } catch (e) {

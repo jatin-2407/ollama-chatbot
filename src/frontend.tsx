@@ -9,7 +9,7 @@ import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import { AuthProvider } from "./components/Providers/authProvider";
 import { RoutesProvider } from "./components/Providers/routesProvider";
-
+import "./index.css"
 const elem = document.getElementById("root")!;
 const app = (
   <StrictMode>

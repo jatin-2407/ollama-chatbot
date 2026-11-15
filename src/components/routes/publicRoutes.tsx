@@ -6,9 +6,9 @@ export const PublicRoutes = () => {
 
     return <>
         <Routes>
-            <Route path="/login" element={<SignIn />} />
+            <Route path="/signin" element={<SignIn />} />
             <Route path="/signup" element={<Signup />} />
-            <Route path="*" element={<Navigate to='/login' />} />
+            <Route path="*" element={<Navigate to='/signin' />} />
         </Routes>
     </>
 

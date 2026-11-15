@@ -30,7 +30,7 @@ const validateMessageRequest = async (c: Context): Promise<IMessageRequest | Zod
 
 export const messageController: Controller = {
     post: {
-        "/send":
+        "/api/v1/message/send":
             allowLoggedIn(async (c) => {
                 //validae the request
                 const res = await validateMessageRequest(c);
