@@ -38,9 +38,9 @@ const validateSignup = (data: ISingupData): { error: boolean; data: Record<strin
 
 export const Signup = () => {
     const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
     const [name, setName] = useState("");
 
-    const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
     const [errors, setErrors] = useState<Partial<ISingupData>>({});
     const navigate = useNavigate();
@@ -93,7 +93,6 @@ export const Signup = () => {
     return <>
         <form onSubmit={handleSubmit}>
             <h2>Signup</h2>
-            <h4>Welcome back to ollama chat!</h4>
             <div>
                 <label>name:
                     <input type="text" onChange={handleName} />

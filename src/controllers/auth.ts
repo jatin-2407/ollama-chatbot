@@ -28,8 +28,7 @@ export const authController: Controller = {
 
                 return c.json({ message: "User created!" }, 201);
             })),
-        //todo: Prevent  loggedin user from relogin
-        "/api/v1/login":
+        "/api/v1/signIn":
             blockLoggedIn(validateLoginRequest(async (c) => {
 
                 const body: LoginRequest = c.get("body");
@@ -47,6 +46,7 @@ export const authController: Controller = {
 
                 return c.json({
                     message: "Welcome",
+                    user: user.name,
                     token: jwt,
                 }, 200);
             })),
