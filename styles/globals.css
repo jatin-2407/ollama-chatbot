@@ -1,0 +1,141 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+@import "@fontsource-variable/inter";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---- "Iris" theme: soft lavender canvas, violet primary, coral accent. Flat colours, no gradients. ---- */
+:root {
+  --radius: 1rem;
+
+  --background: oklch(0.975 0.008 285);       /* lavender mist */
+  --foreground: oklch(0.25 0.03 280);         /* deep indigo ink */
+  --card: oklch(0.995 0.003 285);
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+
+  --primary: oklch(0.56 0.21 285);            /* electric violet */
+  --primary-foreground: oklch(0.99 0.005 285);
+  --secondary: oklch(0.95 0.025 285);         /* violet tint */
+  --secondary-foreground: oklch(0.42 0.15 285);
+  --muted: oklch(0.955 0.01 285);
+  --muted-foreground: oklch(0.55 0.025 280);
+  --accent: oklch(0.72 0.16 25);              /* coral */
+  --accent-foreground: oklch(0.99 0.005 25);
+  --destructive: oklch(0.6 0.2 22);
+  --destructive-foreground: oklch(0.99 0.005 22);
+  --success: oklch(0.65 0.15 160);
+
+  --border: oklch(0.91 0.015 285);
+  --input: oklch(0.9 0.015 285);
+  --ring: oklch(0.56 0.21 285);
+
+  --sidebar: oklch(0.995 0.003 285);          /* floating light panel */
+  --sidebar-foreground: var(--foreground);
+  --sidebar-muted: oklch(0.55 0.025 280);
+  --sidebar-accent: oklch(0.95 0.025 285);
+  --sidebar-border: oklch(0.92 0.012 285);
+
+  --code: oklch(0.27 0.04 280);               /* code blocks */
+  --code-foreground: oklch(0.93 0.02 285);
+}
+
+
+/* Dark: deep indigo night (not black), same violet + coral accents. */
+.dark {
+  color-scheme: dark;
+  --background: oklch(0.2 0.03 280);
+  --foreground: oklch(0.94 0.012 285);
+  --card: oklch(0.245 0.035 280);
+  --muted: oklch(0.29 0.035 280);
+  --muted-foreground: oklch(0.72 0.03 285);
+  --primary: oklch(0.68 0.18 285);
+  --primary-foreground: oklch(0.18 0.04 285);
+  --secondary: oklch(0.32 0.07 285);
+  --secondary-foreground: oklch(0.88 0.06 285);
+  --accent: oklch(0.74 0.15 25);
+  --accent-foreground: oklch(0.2 0.04 25);
+  --destructive: oklch(0.68 0.19 22);
+  --success: oklch(0.72 0.15 160);
+  --border: oklch(0.32 0.035 280);
+  --input: oklch(0.35 0.035 280);
+  --ring: oklch(0.68 0.18 285);
+  --sidebar: oklch(0.245 0.035 280);
+  --sidebar-muted: oklch(0.72 0.03 285);
+  --sidebar-border: oklch(0.32 0.035 280);
+  --code: oklch(0.16 0.03 280);
+}
+
+@theme inline {
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-success: var(--success);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-muted: var(--sidebar-muted);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-code: var(--code);
+  --color-code-foreground: var(--code-foreground);
+}
+
+@layer base {
+  * { @apply border-border outline-ring/50; }
+  html, body, #root { @apply h-full; }
+  html { transition: background-color .2s; }
+  body {
+    @apply bg-background text-foreground antialiased;
+    font-feature-settings: "cv11", "ss01";
+    letter-spacing: -0.006em;
+    font-family: "Inter Variable", ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  }
+  ::selection { background: var(--secondary); color: var(--secondary-foreground); }
+}
+
+/* Scrollbars */
+.scroll-thin { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+
+/* Markdown rendered by assistant messages (no typography plugin needed). */
+.markdown { @apply text-sm leading-relaxed break-words; }
+.markdown > * + * { @apply mt-3; }
+.markdown h1 { @apply text-lg font-semibold; }
+.markdown h2 { @apply text-base font-semibold; }
+.markdown h3 { @apply text-sm font-semibold; }
+.markdown ul { @apply list-disc pl-5 space-y-1; }
+.markdown ol { @apply list-decimal pl-5 space-y-1; }
+.markdown a { @apply text-primary underline underline-offset-2; }
+.markdown blockquote { @apply border-l-4 border-primary/40 pl-3 text-muted-foreground; }
+.markdown :not(pre) > code { @apply rounded bg-secondary px-1.5 py-0.5 font-mono text-[0.85em] text-secondary-foreground; }
+.markdown pre { @apply overflow-x-auto rounded-xl bg-code p-4 text-xs text-code-foreground; }
+.markdown pre code { @apply font-mono; }
+.markdown table { @apply w-full border-collapse text-xs; }
+.markdown table { @apply overflow-hidden rounded-lg; }
+.markdown th, .markdown td { @apply border border-border px-2 py-1.5 text-left; }
+.markdown th { @apply bg-muted font-semibold; }
+.markdown hr { @apply border-border; }
+
+/* Frosted surface (flat translucent colour + blur, no gradient). */
+.glass { background: color-mix(in oklch, var(--card) 75%, transparent); backdrop-filter: blur(14px); }

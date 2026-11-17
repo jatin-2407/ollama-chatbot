@@ -1,59 +1,46 @@
 import bcrypt from "bcrypt";
 import JWT from "jsonwebtoken";
-import type { Controller, ISignUpRequest, LoginRequest } from "./types";
-import { blockLoggedIn, validateLoginRequest, validateSignUpRequest } from "@/middlewares/auth";
+import type { Controller } from "./types";
+import { blockLoggedIn, validateBody } from "@/middlewares/auth";
 import { User } from "@/database/models";
-import { basePath } from "hono/route";
+import { loginSchema, signupSchema, type LoginRequest, type SignupRequest } from "@/shared/schemas";
+import { API, type SignInResponse } from "@/shared/types";
+import { fail } from "@/utils/http";
 
 export const authController: Controller = {
     post: {
-        "/api/v1/signup":
-            blockLoggedIn(validateSignUpRequest(async (c) => {
+        [API.signup]: blockLoggedIn(validateBody(signupSchema)(async (c) => {
+            const body = c.get("body") as SignupRequest;
 
-                const body = c.get("body") as ISignUpRequest;
-                const user = await User.findOne({
-                    email: body.email
-                })
+            if (await User.exists({ email: body.email })) {
+                return fail(c, 400, "An account with this email already exists", { email: "Email is already registered" });
+            }
 
-                if (user) {
-                    return c.json({ message: 'user already exists' }, 400);
+            await User.create({
+                name: body.name,
+                email: body.email,
+                password: await bcrypt.hash(body.password, Number(process.env.APP_BCRYPT_SALT_ROUNDS) || 10),
+            });
 
-                }
+            return c.json({ message: "Account created!" }, 201);
+        })),
 
-                const newUser = new User();
-                newUser.email = body.email;
-                newUser.name = body.name;
-                newUser.password = await bcrypt.hash(body.password, Number(process.env.APP_BCRYPT_SALT_ROUNDS) || 10);
-                await newUser.save();
+        [API.signin]: blockLoggedIn(validateBody(loginSchema)(async (c) => {
+            const body = c.get("body") as LoginRequest;
 
-                return c.json({ message: "User created!" }, 201);
-            })),
-        "/api/v1/signIn":
-            blockLoggedIn(validateLoginRequest(async (c) => {
+            const user = await User.findOne({ email: body.email });
+            if (!user || !(await bcrypt.compare(body.password, user.password))) {
+                return fail(c, 401, "Invalid email or password");
+            }
 
-                const body: LoginRequest = c.get("body");
+            const jwtSecret = process.env.APP_PASSWORD_CODE;
+            if (!jwtSecret) throw new Error("APP_PASSWORD_CODE is not configured");
 
-                const user = await User.findOne({ email: body.email });
-                if (!user) return c.json({ message: "Invalid login!" }, 401);
-
-                const passwordOkay = await bcrypt.compare(body.password, user.password);
-                if (!passwordOkay) return c.json({ message: "Invalid login!" }, 401);
-
-
-                const jwtSecret = process.env.APP_PASSWORD_CODE;
-                if (!jwtSecret) throw new Error("APP_PASSWORD_CODE is not configured");
-                const jwt = JWT.sign({ user: user._id.toString() }, jwtSecret, { expiresIn: "7d" });
-
-                return c.json({
-                    message: "Welcome",
-                    user: user.name,
-                    token: jwt,
-                }, 200);
-            })),
-
+            return c.json<SignInResponse>({
+                message: "Welcome",
+                user: user.name,
+                token: JWT.sign({ user: user._id.toString() }, jwtSecret, { expiresIn: "7d" }),
+            }, 200);
+        })),
     },
 };
-
-
-
-

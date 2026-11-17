@@ -1,23 +1,16 @@
-/**
- * This file is the entry point for the React app, it sets up the root
- * element and renders the App component to the DOM.
- *
- * It is included in `src/index.html`.
- */
-
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
-import { AuthProvider } from "./components/Providers/authProvider";
-import { RoutesProvider } from "./components/Providers/routesProvider";
-import "./index.css"
-const elem = document.getElementById("root")!;
+import { AppRoutes } from "./components/AppRoutes";
+import { ErrorBoundary } from "./components/ErrorBoundary";
+import "./index.css";
+
 const app = (
   <StrictMode>
-    <AuthProvider>
-      <RoutesProvider />
-    </AuthProvider>
+    <ErrorBoundary>
+      <AppRoutes />
+    </ErrorBoundary>
   </StrictMode>
 );
 
 // https://bun.com/docs/bundler/hot-reloading#import-meta-hot-data
-(import.meta.hot.data.root ??= createRoot(elem)).render(app);
+(import.meta.hot.data.root ??= createRoot(document.getElementById("root")!)).render(app);
