@@ -18,7 +18,9 @@ export async function app() {
     routes: {
       "/": indexHtml,
       "/signup": indexHtml,
-      "/login": indexHtml,
+      "/signin": indexHtml,
+      "/chat": indexHtml,
+      "/chat/*": indexHtml,
     },
     fetch: app.fetch,
   });

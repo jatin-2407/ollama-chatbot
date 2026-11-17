@@ -44,7 +44,7 @@ export const messageController: Controller = {
                 }
 
                 let messageFail = false;
-                let response: Array<Message & { role: string, content: string }> = []
+                let response: Array<Message > = []
                 for (let i = 0; i < chats.length; i++) {
                     const chat = chats[i];
                     if (chat)

@@ -3,7 +3,6 @@ import {
     useEffect,
     useMemo,
     useState,
-    type FormEvent,
 } from "react";
 
 import { useAuth } from "../Contexts/authContext";
@@ -52,8 +51,8 @@ export const ChatList = () => {
             }
 
             const data: IChatListResponse = await res.json();
-
             setChats(data.data ?? []);
+
         } catch (err) {
             if (err instanceof Error && err.name === "AbortError") {
                 return;
@@ -90,18 +89,12 @@ export const ChatList = () => {
         );
     }, [chats, search]);
 
-    // Delete chat
+
     const handleDelete = async (
         e: React.MouseEvent<HTMLButtonElement>,
         chatId: string
     ) => {
         e.stopPropagation();
-
-        const confirmed = window.confirm(
-            "Are you sure you want to delete this conversation?"
-        );
-
-        if (!confirmed) return;
 
         setDeletingId(chatId);
         setError("");
@@ -125,6 +118,7 @@ export const ChatList = () => {
             if (curChat === chatId) {
                 navigate("/chat");
             }
+
         } catch (err) {
             setError(
                 err instanceof Error
@@ -181,9 +175,11 @@ export const ChatList = () => {
                         +
                     </button>
                 </div>
+
                 {/* Search */}
                 <div className="px-4 pt-5">
                     <div className="flex items-center gap-2 rounded-xl border border-gray-800 bg-[#202020] px-3 py-2.5 transition focus-within:border-gray-600">
+
                         <svg
                             className="h-4 w-4 shrink-0 text-gray-500"
                             viewBox="0 0 24 24"
@@ -292,10 +288,11 @@ export const ChatList = () => {
                                         onClick={() =>
                                             navigate(`/chat/${chat._id}`)
                                         }
-                                        className={`group flex cursor-pointer items-center gap-2 rounded-xl px-3 py-3 transition ${isActive
+                                        className={`group flex cursor-pointer items-center gap-2 rounded-xl px-3 py-3 transition ${
+                                            isActive
                                                 ? "bg-[#303030] text-white"
                                                 : "text-gray-400 hover:bg-[#242424] hover:text-gray-100"
-                                            }`}
+                                        }`}
                                     >
                                         <svg
                                             className="h-4 w-4 shrink-0 opacity-70"
@@ -311,6 +308,7 @@ export const ChatList = () => {
                                             {chat.title}
                                         </span>
 
+                                        {/* Delete Button */}
                                         <button
                                             type="button"
                                             disabled={isDeleting}

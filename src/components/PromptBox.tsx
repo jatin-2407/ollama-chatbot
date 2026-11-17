@@ -16,7 +16,7 @@ import {
 
 import { useAuth } from "./Contexts/authContext";
 
-interface IMessage {
+export interface IMessage {
     role: "user" | "assistant";
     content: string;
 }
