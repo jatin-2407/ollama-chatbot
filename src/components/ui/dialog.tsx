@@ -36,7 +36,7 @@ export const Dialog = ({ open, onClose, title, description, children, footer, lo
 
   return createPortal(
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/25 p-4 backdrop-blur-sm animate-in fade-in-0"
+      className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/25 p-4 backdrop-blur-sm animate-fade-in"
       onMouseDown={(e) => e.target === e.currentTarget && !locked && onClose()}
     >
       <div
@@ -44,7 +44,7 @@ export const Dialog = ({ open, onClose, title, description, children, footer, lo
         role="dialog"
         aria-modal="true"
         aria-labelledby="dialog-title"
-        className={cn("w-full max-w-md rounded-3xl border bg-card shadow-2xl shadow-primary/10 animate-in zoom-in-95 fade-in-0", className)}
+        className={cn("w-full max-w-md rounded-3xl border bg-card shadow-2xl shadow-primary/10 animate-pop-in", className)}
       >
         <div className="flex items-start justify-between gap-4 px-6 pt-6 pb-2">
           <div>

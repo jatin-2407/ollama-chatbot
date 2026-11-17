@@ -1,68 +1,43 @@
-import { Slot } from "@radix-ui/react-slot";
-import { cva, type VariantProps } from "class-variance-authority";
-import * as React from "react";
+import type { ComponentProps } from "react";
 import { Loader2 } from "lucide-react";
-
 import { cn } from "@/lib/utils";
 
-const buttonVariants = cva(
-  "inline-flex items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium transition-all cursor-pointer active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none [&_svg:not([class*='size-'])]:size-4 shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-[3px] aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
-  {
-    variants: {
-      variant: {
-        default: "bg-primary text-primary-foreground shadow-md shadow-primary/25 hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/30",
-        destructive:
-          "bg-destructive text-white hover:bg-destructive/90 focus-visible:ring-destructive/20 dark:focus-visible:ring-destructive/40 dark:bg-destructive/60",
-        outline:
-          "border bg-background shadow-xs hover:bg-accent hover:text-accent-foreground dark:bg-input/30 dark:border-input dark:hover:bg-input/50",
-        secondary: "bg-secondary text-secondary-foreground hover:bg-secondary/80",
-        ghost: "hover:bg-accent hover:text-accent-foreground dark:hover:bg-accent/50",
-        link: "text-primary underline-offset-4 hover:underline",
-      },
-      size: {
-        default: "h-9 px-4 py-2 has-[>svg]:px-3",
-        sm: "h-8 rounded-md gap-1.5 px-3 has-[>svg]:px-2.5",
-        lg: "h-11 rounded-xl px-6 has-[>svg]:px-4",
-        icon: "size-9",
-        "icon-sm": "size-8",
-        "icon-lg": "size-10",
-      },
-    },
-    defaultVariants: {
-      variant: "default",
-      size: "default",
-    },
-  },
-);
+const VARIANTS = {
+  primary: "bg-primary text-primary-foreground shadow-md shadow-primary/25 hover:bg-primary/90 hover:shadow-lg hover:shadow-primary/30",
+  destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+  outline: "border bg-card hover:bg-muted",
+  ghost: "text-muted-foreground hover:bg-muted hover:text-foreground",
+} as const;
 
-function Button({
-  className,
-  variant,
-  size,
-  asChild = false,
-  loading = false,
-  disabled,
-  children,
-  ...props
-}: React.ComponentProps<"button"> &
-  VariantProps<typeof buttonVariants> & {
-    asChild?: boolean;
-    loading?: boolean;
-  }) {
-  const Comp = asChild ? Slot : "button";
+const SIZES = {
+  md: "h-9 px-4",
+  lg: "h-11 px-6",
+  icon: "size-9",
+  "icon-sm": "size-8",
+} as const;
 
-  return (
-    <Comp
-      data-slot="button"
-      className={cn(buttonVariants({ variant, size, className }))}
-      disabled={disabled || loading}
-      aria-busy={loading || undefined}
-      {...props}
-    >
-      {loading && !asChild && <Loader2 className="animate-spin" />}
-      {children}
-    </Comp>
-  );
+interface ButtonProps extends ComponentProps<"button"> {
+  variant?: keyof typeof VARIANTS;
+  size?: keyof typeof SIZES;
+  loading?: boolean;
 }
 
-export { Button };
+export const Button = ({ variant = "primary", size = "md", loading = false, disabled, className, children, type = "button", ...props }: ButtonProps) => (
+  <button
+    type={type}
+    disabled={disabled || loading}
+    aria-busy={loading || undefined}
+    className={cn(
+      "inline-flex shrink-0 cursor-pointer items-center justify-center gap-2 whitespace-nowrap rounded-xl text-sm font-medium outline-none transition-all",
+      "focus-visible:ring-[3px] focus-visible:ring-ring/50 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-50",
+      "[&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
+      VARIANTS[variant],
+      SIZES[size],
+      className,
+    )}
+    {...props}
+  >
+    {loading && <Loader2 className="animate-spin" />}
+    {children}
+  </button>
+);
