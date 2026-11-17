@@ -1,87 +1,44 @@
 import type { Controller } from "./types";
-import { allowLoggedIn } from "@/middlewares/auth";
-import type { Context } from "hono";
-import z, { ZodError } from "zod";
-import mongoose from "mongoose";
-import { type ChatRequest, type ChatResponse, type Message } from "ollama";
-import { sendMessageToLLM, writeJson } from "@/services/MessageService";
-import { loadChat } from "@/services/ChatService";
-
-interface IMessageRequest {
-    chatId: string,
-    message: string,
-}
-const messageRequestSchema = z.object({
-    chatId: z.string()
-        .refine((id) => mongoose.Types.ObjectId.isValid(id), {
-            message: "invalid chat",
-        }),
-    message: z.string().nonempty("message can't be empty").max(255, "message is too long"),
-});
-
-const validateMessageRequest = async (c: Context): Promise<IMessageRequest | ZodError> => {
-    const data = await c.req.json();
-    const res = messageRequestSchema.safeParse(data);
-    if (res.error) {
-        return res.error;
-    };
-    return data;
-}
+import { allowLoggedIn, validateBody } from "@/middlewares/auth";
+import { askModel, writeHistory } from "@/services/MessageService";
+import { findOwnedChat, loadConversations } from "@/services/ChatService";
+import { sendMessageSchema, type SendMessageRequest } from "@/shared/schemas";
+import { API, type SendMessageResponse } from "@/shared/types";
+import { HttpError } from "@/utils/http";
 
 export const messageController: Controller = {
     post: {
-        "/api/v1/message/send":
-            allowLoggedIn(async (c) => {
-                //validae the request
-                const res = await validateMessageRequest(c);
-                if (res instanceof ZodError) {
-                    return c.json({ error: res }, 400);
-                }
+        [API.sendMessage]: allowLoggedIn(validateBody(sendMessageSchema)(async (c) => {
+            const { chatId, message } = c.get("body") as SendMessageRequest;
 
-                const { loadingFails, chats, fileNames } = await loadChat(res.chatId);
-                if (loadingFails) {
-                    return c.json({ error: 'fail to load chat messages' }, 500);
-                }
+            const chat = await findOwnedChat(c.get("user")._id, chatId);
+            const { files, conversations } = await loadConversations(chat);
 
-                let messageFail = false;
-                let response: Array<Message > = []
-                for (let i = 0; i < chats.length; i++) {
-                    const chat = chats[i];
-                    if (chat)
-                        try {
-                            chat?.messages?.push({ role: 'user', content: res.message });
-                            const reply = await sendMessageToLLM(chat);
-                            response.push(reply);
-                            chat.messages?.push(reply)
-                        } catch (e) {
-                            console.log("error", e)
-                            messageFail = true;
-                            break;
-                        }
+            const withPrompt = conversations.map((conv) => ({
+                ...conv,
+                messages: [...conv.messages, { role: "user" as const, content: message }],
+            }));
 
-                }
+            // ask all models in parallel; nothing is saved unless every model answers
+            const response = await Promise.all(
+                withPrompt.map((conv) =>
+                    askModel(conv).catch((e) => {
+                        console.error(`Model ${conv.model} failed`, e);
+                        throw new HttpError(502, `Model "${conv.model}" failed to respond. Please try again.`);
+                    }),
+                ),
+            );
 
+            try {
+                await Promise.all(withPrompt.map((conv, i) =>
+                    writeHistory(files[i]!, { ...conv, messages: [...conv.messages, response[i]!] })));
+                await chat.updateOne({ $currentDate: { updatedAt: true } }); // bump to top of the list
+            } catch (e) {
+                console.error("Failed to persist chat", e);
+                throw new HttpError(500, "Failed to save the conversation. Please try again.");
+            }
 
-                if (messageFail) {
-                    return c.json({ error: 'fail  to get chat response' }, 500);
-                }
-
-                for (let i = 0; i < fileNames.length; i++) {
-                    try {
-                        writeJson(fileNames[i] || "", chats[i]);
-                    } catch {
-                        return c.json({ error: 'fail  to save chat response,try again' }, 500);
-                    }
-                }
-
-
-                return c.json({
-                    response,
-                    chatId: res.chatId,
-                }, 200);
-
-            })
+            return c.json<SendMessageResponse>({ response, chatId }, 200);
+        })),
     },
 };
-
-

@@ -1,13 +1,4 @@
 import mongoose from "mongoose";
+import { config } from "@/config";
 
-export const dbInit = async () => {
-    try {
-        if (Bun.env.NODE_ENV === 'test') {
-            await mongoose.connect(process.env.TEST_DATABASE_URI || "");
-        } else {
-            await mongoose.connect(process.env.DATABASE_URI || "");
-        }
-    } catch (e: unknown) {
-        console.error("Failed to  connect to database");
-    }
-}
+export const dbInit = () => mongoose.connect(config.databaseUri);

@@ -1,22 +1,12 @@
 import type { Context } from "hono";
-export interface ISignUpRequest {
-    name: string,
-    email: string;
-    password: string;
-}
+import type { UserDoc } from "@/database/models";
 
-export type LoginRequest = Omit<ISignUpRequest, "name">
+export type AppEnv = { Variables: { body: unknown; user: UserDoc } };
 
-export type Variables = { body: LoginRequest | ISignUpRequest; };
-
-export type AppContext = Context<{ Variables: Variables; }>;
+export type AppContext = Context<AppEnv>;
 
 export type ControllerMethod = (c: AppContext) => Promise<Response>;
 
 export type MiddleWare = (handler: ControllerMethod) => ControllerMethod;
 
-export type Controller = {
-    [key in "get" | "post"|"delete"]?: {
-        [path: string]: ControllerMethod;
-    };
-};
+export type Controller = Partial<Record<"get" | "post" | "delete", Record<string, ControllerMethod>>>;

@@ -1,75 +1,44 @@
-import { Chat } from "@/database/models";
-import { getMessageFilesName, loadChatMessages } from "./MessageService";
-import type { ChatRequest } from "ollama";
+import type { Types } from "mongoose";
+import { Chat, type ChatDoc } from "@/database/models";
+import { objectIdSchema } from "@/shared/schemas";
+import { HttpError } from "@/utils/http";
+import { deleteHistory, historyFiles, readHistory, type StoredChat } from "./MessageService";
 
-export const createChat = async (title: string, models: string[]) => {
-    return await Chat.create({
-        title,
-        model_names: models,
-    });
+type UserId = Types.ObjectId;
+
+export const createChat = (user: UserId, title: string, model_names: string[]) =>
+    Chat.create({ user, title, model_names });
+
+export const listChats = (user: UserId) =>
+    Chat.find({ user }).select("_id title").sort({ updatedAt: -1 }).lean();
+
+/** Finds a chat owned by `user`, or throws 400/404. Other users' chats are reported as not found. */
+export const findOwnedChat = async (user: UserId, id: string | undefined): Promise<ChatDoc> => {
+    if (!objectIdSchema.safeParse(id).success) throw new HttpError(400, "Invalid chat id");
+    const chat = await Chat.findOne({ _id: id, user });
+    if (!chat) throw new HttpError(404, "Chat not found");
+    return chat;
 };
 
-export const listChats = async () => {
-    return await Chat.find()
-        .select("_id title")
-        .sort({ updatedAt: -1 })
-        .lean();
+/** Deletes the chat record, then its history files. File cleanup failure is logged, not surfaced. */
+export const deleteChat = async (user: UserId, id: string | undefined) => {
+    const chat = await findOwnedChat(user, id);
+    await chat.deleteOne();
+    await deleteHistory(historyFiles(chat.id, chat.model_names)).catch((e) =>
+        console.error(`Failed to remove history files for chat ${chat.id}`, e),
+    );
+    return chat;
 };
 
-export const deleteChat = async (id: string) => {
-    return await Chat.findByIdAndDelete(id);
-};
-
-export const getChat = async (id: string) => {
-    return await Chat.findById(id);
-};
-
-interface ILoadChatResult {
-    loadingFails: boolean,
-    chats: Array<ChatRequest & { stream?: boolean }>,
-    fileNames: string[]
-}
-
-export const loadChat = async (chatId: string): Promise<ILoadChatResult> => {
-    const failResponse: ILoadChatResult = {
-        loadingFails: true,
-        chats: [],
-        fileNames: []
-    }
+/** One conversation per model, in the chat's model order. */
+export const loadConversations = async (chat: ChatDoc): Promise<{ files: string[]; conversations: StoredChat[] }> => {
+    const files = historyFiles(chat.id, chat.model_names);
     try {
-        const chat = await Chat.findById(chatId);
-        if (!chat) return failResponse
-        //load the chat to know the selected models 
-        const messageFilesNames = getMessageFilesName(chat._id, chat?.model_names);
-        let loadingFails = false;
-        const chats: Array<ChatRequest & { stream?: boolean }> = [];
-        messageFilesNames.some((file, index) => {
-            try {
-                const res = loadChatMessages(file);
-                if (!res) {
-                    chats.push({
-                        model: chat.model_names[index] || "",
-                        messages: [],
-                    });
-                } else {
-                    chats.push(res);
-                }
-            } catch (e) {
-                loadingFails = true;
-                return true;
-            };
-        });
-
-        if (loadingFails) return failResponse;
-
-        return {
-            loadingFails,
-            chats,
-            fileNames: messageFilesNames
-        }
-
-    } catch {
-        return failResponse;
+        const loaded = await Promise.all(files.map(readHistory));
+        const conversations = loaded.map((c, i) => c ?? { model: chat.model_names[i]!, messages: [] });
+        return { files, conversations };
+    } catch (e) {
+        console.error(e);
+        throw new HttpError(500, "This chat's history is corrupted and couldn't be loaded");
     }
-
-}
+};

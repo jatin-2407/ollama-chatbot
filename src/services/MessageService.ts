@@ -1,57 +1,36 @@
-import type { IChat } from '@/database/models';
-import fs from 'node:fs'
-import { type ChatRequest, type ChatResponse } from 'ollama';
-import ollama from 'ollama'
+import path from "node:path";
+import { rm } from "node:fs/promises";
+import ollama, { type ChatRequest } from "ollama";
+import { config } from "@/config";
+import type { ChatMessage } from "@/shared/types";
 
-export const writeJson = (file: string, obj: any) => {
-    const content = JSON.stringify(obj);
-    fs.writeFileSync(file, content);
-}
+export type StoredChat = ChatRequest & { messages: ChatMessage[] };
 
-const loadJson = <T = unknown>(filePath: string): T => {
+/** Model names can contain "/" (e.g. hf.co/user/model) — keep each history a single file. */
+const safe = (name: string) => name.replace(/[\\/]/g, "_");
+
+export const historyFiles = (chatId: string, modelNames: string[]) =>
+    modelNames.map((name) => path.join(config.chatDataDir, `${chatId}.${safe(name)}.json`));
+
+/** Returns undefined if the file doesn't exist yet; throws if it's corrupt. */
+export const readHistory = async (file: string): Promise<StoredChat | undefined> => {
+    const f = Bun.file(file);
+    if (!(await f.exists())) return undefined;
     try {
-        const content = fs.readFileSync(filePath, "utf8");
-        return JSON.parse(content) as T;
-    } catch (error) {
-        if (error instanceof SyntaxError) {
-            throw new Error(`Invalid JSON in file: ${filePath}`, {
-                cause: error
-            });
-        }
-
-        throw new Error(`Failed to read file: ${filePath}`, {
-            cause: error
-        });
+        return await f.json();
+    } catch (e) {
+        throw new Error(`Invalid JSON in chat history file: ${file}`, { cause: e });
     }
 };
 
+export const writeHistory = (file: string, chat: StoredChat) => Bun.write(file, JSON.stringify(chat));
 
+/** Missing files are ignored. */
+export const deleteHistory = (files: string[]) => Promise.all(files.map((f) => rm(f, { force: true })));
 
-export const loadChatMessages = (chatMessageFile: string) => {
-    try {
-        return loadJson<ChatRequest & { stream?: boolean }>(chatMessageFile);
-    } catch (error) {
-        //todo correct this  
-        if (
-            error instanceof Error &&
-            error.message.startsWith("Failed to read file:")
-        ) {
-            return;
-        }
-        throw error;
-    }
+export const askModel = async ({ model, messages }: StoredChat): Promise<ChatMessage> => {
+    const res = await ollama.chat({ model, messages, stream: false });
+    return { role: "assistant", content: res.message.content };
 };
 
-
-export const sendMessageToLLM = async (c: ChatRequest & { stream?: boolean }) => {
-    const res = await ollama.chat({
-        model:c.model,
-        messages:c.messages,
-        stream:false
-    });
-    return { role: 'assistant', content: res.message.content };
-}
-
-export const getMessageFilesName = (chat_id: string, model_names: string[]) => {
-    return model_names.map(model_name => `${chat_id}.${model_name}.json`);
-}
+export const listModels = async () => (await ollama.list()).models.map(({ name, size }) => ({ name, size }));

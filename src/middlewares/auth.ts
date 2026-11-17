@@ -1,83 +1,43 @@
-import type { MiddleWare, LoginRequest, ISignUpRequest } from "@/controllers/types";
-import { User, type IUser } from "@/database/models";
-import { getRequestBody } from "@/utils";
-import { loginRequestValidationSchema, signupRequestValidationSchema } from "@/validations/schemas";
-import type { Context, HonoRequest } from "hono";
-import JWT from 'jsonwebtoken'
-import type { ZodError } from "zod";
+import JWT from "jsonwebtoken";
+import type z from "zod";
+import type { HonoRequest } from "hono";
+import type { MiddleWare } from "@/controllers/types";
+import { User, type UserDoc } from "@/database/models";
+import { config } from "@/config";
+import { validate } from "@/shared/schemas";
+import { AUTH_HEADER } from "@/shared/types";
+import { fail } from "@/utils/http";
 
-const isLoggedin = async (req: HonoRequest): Promise<false | IUser> => {
-    const authToken = req.header("auth-token") || "";
+const getAuthUser = async (req: HonoRequest): Promise<UserDoc | null> => {
+    const token = req.header(AUTH_HEADER);
+    if (!token) return null;
     try {
-        const payload: any = JWT.verify(authToken, process.env.APP_PASSWORD_CODE || "");
-        if (payload && !payload.user) {
-            return false;
-        }
-        const authUser = await User.findById(payload.user);
-        if (!authUser) {
-            return false;
-        }
-        return authUser
-    } catch (e: unknown) {
-        return false;
+        const payload = JWT.verify(token, config.jwtSecret);
+        if (typeof payload !== "object" || !payload.user) return null;
+        return await User.findById(payload.user);
+    } catch {
+        return null; // expired / tampered token
     }
-}
-
-export const blockLoggedIn: MiddleWare = (handler) => async (c: Context) => {
-    const res = await isLoggedin(c.req);
-    if (res) {
-        return c.json({ error: "Invalid request" }, 400);
-    }
-    return handler(c)
-}
-
-export const allowLoggedIn: MiddleWare = (handler) => async (c: Context) => {
-    const res = await isLoggedin(c.req);
-    if (res === false) {
-        return c.json({ error: "Invalid request" }, 401);
-    }
-    //set the user for further use
-    c.set("user", res as IUser);
-    return handler(c)
-}
-
-
-const formatValidationError = (error: ZodError) => {
-    const errors: Record<string, string> = {};
-    for (const issue of error.issues) {
-        const field = issue.path.join(".") || "body";
-        // keep the first message per field
-        errors[field] ??= issue.message;
-    }
-    return {
-        error: "Validation failed",
-        message: Object.entries(errors)
-            .map(([field, msg]) => `${field}: ${msg}`)
-            .join("; "),
-        errors,
-    };
 };
 
-export const validateLoginRequest: MiddleWare = (handler) => async (c) => {
-
-    const body = await getRequestBody<LoginRequest>(c.req);
-    const result = loginRequestValidationSchema.safeParse(body);
-
-    if (!result.success) {
-        return c.json(formatValidationError(result.error), 400);
-    }
-    c.set("body", result.data);
+export const blockLoggedIn: MiddleWare = (handler) => async (c) => {
+    if (await getAuthUser(c.req)) return fail(c, 400, "You are already signed in");
     return handler(c);
 };
 
+export const allowLoggedIn: MiddleWare = (handler) => async (c) => {
+    const user = await getAuthUser(c.req);
+    if (!user) return fail(c, 401, "Your session has expired. Please sign in again.");
+    c.set("user", user);
+    return handler(c);
+};
 
-export const validateSignUpRequest: MiddleWare = (handler) => async (c) => {
-
-    const body = await getRequestBody<ISignUpRequest>(c.req);
-    const result = signupRequestValidationSchema.safeParse(body);
-
+/** Validates the JSON body against a shared schema; parsed data is available via `c.get("body")`. */
+export const validateBody = (schema: z.ZodType): MiddleWare => (handler) => async (c) => {
+    const body = await c.req.json().catch(() => null); // empty/malformed JSON → schema reports 400
+    const result = validate(schema, body);
     if (!result.success) {
-        return c.json(formatValidationError(result.error), 400);
+        return fail(c, 400, Object.values(result.errors)[0] ?? "Validation failed", result.errors);
     }
     c.set("body", result.data);
     return handler(c);
